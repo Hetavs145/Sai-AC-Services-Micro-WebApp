@@ -1,0 +1,7 @@
+{
+  "name": "Patraka Bill & DocCraft",
+  "description": "Smart bill template generator, company invoice archive, and voice-annotated photo-to-PDF & Word studio with Gujarati speech support.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
