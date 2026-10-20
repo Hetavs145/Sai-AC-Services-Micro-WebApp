@@ -156,10 +156,10 @@ export function generateBillPdf(bill: BillData): jsPDF {
       doc.text(item.qty || '-', colX2 + colQty / 2, rowY + 5, { align: 'center' });
 
       // Rate
-      doc.text((item.rate || 0).toFixed(0), colX3 + colRate - 2, rowY + 5, { align: 'right' });
+      doc.text((Number(item.rate) || 0).toFixed(0), colX3 + colRate - 2, rowY + 5, { align: 'right' });
 
       // Amount
-      doc.text((item.amount || 0).toFixed(2), colX4 + colAmount - 2, rowY + 5, { align: 'right' });
+      doc.text((Number(item.amount) || 0).toFixed(2), colX4 + colAmount - 2, rowY + 5, { align: 'right' });
 
       rowY += rowHeight;
     }
@@ -183,7 +183,7 @@ export function generateBillPdf(bill: BillData): jsPDF {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8.5);
   doc.text('Total', colX3 + 2, tableBottomY + 5);
-  doc.text(bill.subtotal.toFixed(2), colX4 + colAmount - 2, tableBottomY + 5, { align: 'right' });
+  doc.text((Number(bill.subtotal) || 0).toFixed(2), colX4 + colAmount - 2, tableBottomY + 5, { align: 'right' });
 
   // Bank Details Block & Tax Breakdown Block
   const lowerBlockStartY = tableBottomY + subtotalRowHeight;
@@ -224,12 +224,12 @@ export function generateBillPdf(bill: BillData): jsPDF {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
   doc.text(`Add : CGST @ ${bill.cgstPercent}%`, lowerBlockDividerX + 2, taxY);
-  doc.text(bill.cgstAmount.toFixed(2), taxColValX, taxY, { align: 'right' });
+  doc.text((Number(bill.cgstAmount) || 0).toFixed(2), taxColValX, taxY, { align: 'right' });
 
   taxY += 5;
   doc.line(lowerBlockDividerX, taxY - 1, margin + contentWidth, taxY - 1);
   doc.text(`Add : SGST @ ${bill.sgstPercent}%`, lowerBlockDividerX + 2, taxY + 3);
-  doc.text(bill.sgstAmount.toFixed(2), taxColValX, taxY + 3, { align: 'right' });
+  doc.text((Number(bill.sgstAmount) || 0).toFixed(2), taxColValX, taxY + 3, { align: 'right' });
 
   taxY += 8.5;
   doc.line(lowerBlockDividerX, taxY, margin + contentWidth, taxY);

@@ -74,11 +74,19 @@ export const BillEditor: React.FC<BillEditorProps> = ({
     const updatedItems = bill.items.map((item) => {
       if (item.id !== id) return item;
 
-      const updated = { ...item, [field]: value };
-      if (field === 'qty' || field === 'rate') {
-        const rate = field === 'rate' ? parseFloat(value) || 0 : item.rate;
-        const qty = field === 'qty' ? value : item.qty;
-        updated.amount = calculateItemAmount(qty, rate);
+      const updated = { ...item };
+      if (field === 'rate') {
+        const raw = value;
+        const numRate = raw === '' ? 0 : parseFloat(raw);
+        const safeRate = isNaN(numRate) ? 0 : numRate;
+        updated.rate = raw === '' ? ('' as any) : safeRate;
+        updated.amount = calculateItemAmount(item.qty, safeRate);
+      } else if (field === 'qty') {
+        updated.qty = value;
+        const safeRate = Number(item.rate) || 0;
+        updated.amount = calculateItemAmount(value, safeRate);
+      } else {
+        (updated as any)[field] = value;
       }
       return updated;
     });
@@ -524,7 +532,7 @@ export const BillEditor: React.FC<BillEditorProps> = ({
                       />
                     </td>
                     <td className="py-2 px-2.5 text-right font-mono font-semibold tabular-nums text-neutral-900 dark:text-white">
-                      {item.amount.toFixed(2)}
+                      {(Number(item.amount) || 0).toFixed(2)}
                     </td>
                     <td className="py-1 px-1.5 text-center">
                       <button

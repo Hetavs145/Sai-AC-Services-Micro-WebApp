@@ -101,10 +101,10 @@ export const BillTemplateView: React.FC<BillTemplateViewProps> = ({ bill }) => {
                   {item.qty || '-'}
                 </td>
                 <td className="py-2 px-2 border-r border-neutral-900 text-right font-mono tabular-nums text-xs sm:text-sm align-top">
-                  {item.rate.toFixed(0)}
+                  {(Number(item.rate) || 0).toFixed(0)}
                 </td>
                 <td className="py-2 px-2.5 text-right font-mono tabular-nums text-xs sm:text-sm font-semibold align-top">
-                  {item.amount.toFixed(2)}
+                  {(Number(item.amount) || 0).toFixed(2)}
                 </td>
               </tr>
             ))}
@@ -129,7 +129,7 @@ export const BillTemplateView: React.FC<BillTemplateViewProps> = ({ bill }) => {
                 Total
               </td>
               <td className="py-1.5 px-2.5 text-right font-mono tabular-nums text-xs sm:text-sm font-bold">
-                {bill.subtotal.toFixed(2)}
+                {(Number(bill.subtotal) || 0).toFixed(2)}
               </td>
             </tr>
           </tbody>
@@ -163,7 +163,7 @@ export const BillTemplateView: React.FC<BillTemplateViewProps> = ({ bill }) => {
                 <span className="font-mono font-bold">{bill.cgstPercent}%</span>
               </div>
               <span className="font-mono tabular-nums font-semibold">
-                {bill.cgstAmount.toFixed(2)}
+                {(Number(bill.cgstAmount) || 0).toFixed(2)}
               </span>
             </div>
 
@@ -174,7 +174,7 @@ export const BillTemplateView: React.FC<BillTemplateViewProps> = ({ bill }) => {
                 <span className="font-mono font-bold">{bill.sgstPercent}%</span>
               </div>
               <span className="font-mono tabular-nums font-semibold">
-                {bill.sgstAmount.toFixed(2)}
+                {(Number(bill.sgstAmount) || 0).toFixed(2)}
               </span>
             </div>
 
@@ -186,7 +186,7 @@ export const BillTemplateView: React.FC<BillTemplateViewProps> = ({ bill }) => {
                   <span className="font-mono font-bold">{bill.igstPercent}%</span>
                 </div>
                 <span className="font-mono tabular-nums font-semibold">
-                  {bill.igstAmount.toFixed(2)}
+                  {(Number(bill.igstAmount) || 0).toFixed(2)}
                 </span>
               </div>
             )}
@@ -198,7 +198,7 @@ export const BillTemplateView: React.FC<BillTemplateViewProps> = ({ bill }) => {
               Grand Total
             </span>
             <span className="text-sm sm:text-base font-black font-mono tabular-nums text-neutral-950">
-              {bill.grandTotal.toFixed(2)}
+              {(Number(bill.grandTotal) || 0).toFixed(2)}
             </span>
           </div>
         </div>

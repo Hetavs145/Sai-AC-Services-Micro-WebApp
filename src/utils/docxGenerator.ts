@@ -79,10 +79,10 @@ export async function generateBillDocx(bill: BillData): Promise<Blob> {
             children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun(item.qty || '-')] })],
           }),
           new TableCell({
-            children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun(item.rate.toFixed(0))] })],
+            children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun((Number(item.rate) || 0).toFixed(0))] })],
           }),
           new TableCell({
-            children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun(item.amount.toFixed(2))] })],
+            children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun((Number(item.amount) || 0).toFixed(2))] })],
           }),
         ],
       })
@@ -98,7 +98,7 @@ export async function generateBillDocx(bill: BillData): Promise<Blob> {
           children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: 'Total', bold: true })] })],
         }),
         new TableCell({
-          children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: bill.subtotal.toFixed(2), bold: true })] })],
+          children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: (Number(bill.subtotal) || 0).toFixed(2), bold: true })] })],
         }),
       ],
     })
@@ -113,7 +113,7 @@ export async function generateBillDocx(bill: BillData): Promise<Blob> {
           children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun(`Add: CGST @ ${bill.cgstPercent}%`)] })],
         }),
         new TableCell({
-          children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun(bill.cgstAmount.toFixed(2))] })],
+          children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun((Number(bill.cgstAmount) || 0).toFixed(2))] })],
         }),
       ],
     })
@@ -128,7 +128,7 @@ export async function generateBillDocx(bill: BillData): Promise<Blob> {
           children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun(`Add: SGST @ ${bill.sgstPercent}%`)] })],
         }),
         new TableCell({
-          children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun(bill.sgstAmount.toFixed(2))] })],
+          children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun((Number(bill.sgstAmount) || 0).toFixed(2))] })],
         }),
       ],
     })
@@ -143,7 +143,7 @@ export async function generateBillDocx(bill: BillData): Promise<Blob> {
           children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: 'Grand Total', bold: true, size: 24 })] })],
         }),
         new TableCell({
-          children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: `₹ ${bill.grandTotal.toFixed(2)}`, bold: true, size: 24 })] })],
+          children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: `₹ ${(Number(bill.grandTotal) || 0).toFixed(2)}`, bold: true, size: 24 })] })],
         }),
       ],
     })

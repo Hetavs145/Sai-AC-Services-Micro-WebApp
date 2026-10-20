@@ -13,9 +13,6 @@ import { Eye, Edit3, ArrowLeftRight } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'bill' | 'docStudio' | 'companies' | 'archive'>('bill');
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
-    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-  });
 
   const [companies, setCompanies] = useState<CompanyProfile[]>(() => storage.getCompanies());
   const [activeCompany, setActiveCompany] = useState<CompanyProfile>(() => storage.getActiveCompany());
@@ -33,14 +30,10 @@ export default function App() {
   // Mobile split view toggle: 'editor' vs 'preview'
   const [mobileViewMode, setMobileViewMode] = useState<'editor' | 'preview'>('editor');
 
-  // Sync dark mode class
+  // Enforce light mode only across the entire app
   useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [isDarkMode]);
+    document.documentElement.classList.remove('dark');
+  }, []);
 
   // When active company is switched, update current bill's company
   const handleSelectCompany = (company: CompanyProfile) => {
@@ -150,13 +143,11 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-100 dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 transition-colors">
+    <div className="min-h-screen bg-neutral-100 text-neutral-900 transition-colors">
       {/* Universal Top Navigation */}
       <TopNav
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        isDarkMode={isDarkMode}
-        setIsDarkMode={setIsDarkMode}
         onNewBill={handleNewBill}
         activeCompanyName={activeCompany.name}
       />
