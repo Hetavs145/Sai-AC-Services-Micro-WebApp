@@ -1,17 +1,22 @@
 import { BillItem } from '../types';
 
 export function extractNumericQty(qtyStr: string | number): number {
-  if (typeof qtyStr === 'number') return qtyStr;
+  if (typeof qtyStr === 'number') {
+    return isNaN(qtyStr) ? 0 : qtyStr;
+  }
   if (!qtyStr) return 0;
   // Match digits and optional decimal
-  const match = qtyStr.match(/[\d.]+/);
-  return match ? parseFloat(match[0]) : 0;
+  const match = String(qtyStr).match(/[\d.]+/);
+  if (!match) return 0;
+  const parsed = parseFloat(match[0]);
+  return isNaN(parsed) ? 0 : parsed;
 }
 
 export function calculateItemAmount(qty: string | number, rate: number): number {
   const numericQty = extractNumericQty(qty);
-  const total = numericQty * (rate || 0);
-  return Math.round(total * 100) / 100;
+  const safeRate = typeof rate === 'number' && !isNaN(rate) ? rate : (parseFloat(String(rate)) || 0);
+  const total = numericQty * safeRate;
+  return isNaN(total) ? 0 : Math.round(total * 100) / 100;
 }
 
 export interface TotalsResult {
@@ -24,23 +29,32 @@ export interface TotalsResult {
 }
 
 export function calculateBillTotals(
-  items: BillItem[],
+  items: BillItem[] = [],
   cgstPercent = 9,
   sgstPercent = 9,
   igstPercent = 0,
-  roundToNearestRupee = true
+  roundToNearestRupee = true,
+  isGst = true
 ): TotalsResult {
-  const subtotal = items.reduce((sum, item) => {
-    const amt = typeof item.amount === 'number' && !isNaN(item.amount) 
-      ? item.amount 
-      : calculateItemAmount(item.qty, item.rate);
-    return sum + amt;
+  const actualCgst = isGst ? (Number(cgstPercent) || 0) : 0;
+  const actualSgst = isGst ? (Number(sgstPercent) || 0) : 0;
+  const actualIgst = isGst ? (Number(igstPercent) || 0) : 0;
+
+  const subtotal = (items || []).reduce((sum, item) => {
+    let amt = 0;
+    if (typeof item.amount === 'number' && !isNaN(item.amount)) {
+      amt = item.amount;
+    } else {
+      const safeRate = typeof item.rate === 'number' ? item.rate : (parseFloat(String(item.rate)) || 0);
+      amt = calculateItemAmount(item.qty, safeRate);
+    }
+    return sum + (Number(amt) || 0);
   }, 0);
 
   const roundedSubtotal = Math.round(subtotal * 100) / 100;
-  const cgstAmount = Math.round(roundedSubtotal * (cgstPercent / 100) * 100) / 100;
-  const sgstAmount = Math.round(roundedSubtotal * (sgstPercent / 100) * 100) / 100;
-  const igstAmount = Math.round(roundedSubtotal * (igstPercent / 100) * 100) / 100;
+  const cgstAmount = Math.round(roundedSubtotal * (actualCgst / 100) * 100) / 100;
+  const sgstAmount = Math.round(roundedSubtotal * (actualSgst / 100) * 100) / 100;
+  const igstAmount = Math.round(roundedSubtotal * (actualIgst / 100) * 100) / 100;
   
   const rawGrandTotal = roundedSubtotal + cgstAmount + sgstAmount + igstAmount;
   let grandTotal = Math.round(rawGrandTotal * 100) / 100;
@@ -53,12 +67,12 @@ export function calculateBillTotals(
   }
 
   return {
-    subtotal: roundedSubtotal,
-    cgstAmount,
-    sgstAmount,
-    igstAmount,
-    roundOff,
-    grandTotal,
+    subtotal: isNaN(roundedSubtotal) ? 0 : roundedSubtotal,
+    cgstAmount: isNaN(cgstAmount) ? 0 : cgstAmount,
+    sgstAmount: isNaN(sgstAmount) ? 0 : sgstAmount,
+    igstAmount: isNaN(igstAmount) ? 0 : igstAmount,
+    roundOff: isNaN(roundOff) ? 0 : roundOff,
+    grandTotal: isNaN(grandTotal) ? 0 : grandTotal,
   };
 }
 
@@ -90,10 +104,15 @@ function convertBelowThousand(n: number): string {
  * Converts a positive number to Indian Currency Words (e.g. 22798 -> "Twenty Two Thousand Seven Hundred Ninety Eight Only")
  */
 export function numberToIndianWords(amount: number): string {
-  if (amount === 0) return 'Zero Rupees Only';
-  if (isNaN(amount) || amount < 0) return '';
+  if (amount === 0 || amount === null || amount === undefined) {
+    return 'Zero Rupees Only';
+  }
+  const safeAmount = Number(amount);
+  if (isNaN(safeAmount) || safeAmount <= 0) {
+    return 'Zero Rupees Only';
+  }
 
-  const rounded = Math.round(amount * 100) / 100;
+  const rounded = Math.round(safeAmount * 100) / 100;
   const integerPart = Math.floor(rounded);
   const decimalPart = Math.round((rounded - integerPart) * 100);
 
@@ -123,6 +142,9 @@ export function numberToIndianWords(amount: number): string {
   }
 
   let words = parts.join(' ').replace(/\s+/g, ' ').trim();
+  if (!words) {
+    words = 'Zero';
+  }
   if (decimalPart > 0) {
     const decimalWords = convertBelowThousand(decimalPart);
     words += ` and ${decimalWords} Paise`;

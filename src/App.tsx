@@ -5,17 +5,18 @@ import { BillEditor } from './components/BillEditor';
 import { CompanyManager } from './components/CompanyManager';
 import { PhotoDocStudio } from './components/PhotoDocStudio';
 import { BillsArchive } from './components/BillsArchive';
-import { BillData, CompanyProfile } from './types';
+import { BillData, CompanyProfile, PartyProfile } from './types';
 import { storage } from './utils/storage';
 import { DEFAULT_BILL, DEFAULT_COMPANY } from './utils/defaultData';
-import { calculateBillTotals, numberToIndianWords } from './utils/billCalculator';
-import { Eye, Edit3, ArrowLeftRight } from 'lucide-react';
+import { numberToIndianWords } from './utils/billCalculator';
+import { Eye, Edit3 } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'bill' | 'docStudio' | 'companies' | 'archive'>('bill');
 
   const [companies, setCompanies] = useState<CompanyProfile[]>(() => storage.getCompanies());
   const [activeCompany, setActiveCompany] = useState<CompanyProfile>(() => storage.getActiveCompany());
+  const [parties, setParties] = useState<PartyProfile[]>(() => storage.getParties());
   const [bills, setBills] = useState<BillData[]>(() => storage.getBills());
   
   // Current bill being edited
@@ -35,25 +36,53 @@ export default function App() {
     document.documentElement.classList.remove('dark');
   }, []);
 
-  // When active company is switched, update current bill's company
+  // Fetch initial cloud data from server on startup
+  useEffect(() => {
+    storage.fetchCloudData().then((data) => {
+      if (data.companies?.length) {
+        setCompanies(data.companies);
+        const active = data.companies.find((c) => c.isDefault) || data.companies[0];
+        if (active) setActiveCompany(active);
+      }
+      if (data.parties?.length) setParties(data.parties);
+      if (data.bills?.length) {
+        setBills(data.bills);
+        setCurrentBill(data.bills[0]);
+      }
+    });
+  }, []);
+
+  // When active company is switched, update current bill's company & taxes
   const handleSelectCompany = (company: CompanyProfile) => {
     setActiveCompany(company);
     storage.setActiveCompanyId(company.id);
-    setCurrentBill((prev) => ({
-      ...prev,
-      company,
-    }));
+    const isGst = company.isGst;
+    setCurrentBill((prev) => {
+      const cgst = isGst ? 9 : 0;
+      const sgst = isGst ? 9 : 0;
+      const cgstAmount = isGst ? Math.round(prev.subtotal * 0.09 * 100) / 100 : 0;
+      const sgstAmount = isGst ? Math.round(prev.subtotal * 0.09 * 100) / 100 : 0;
+      const grandTotal = Math.round(prev.subtotal + cgstAmount + sgstAmount);
+      return {
+        ...prev,
+        company,
+        cgstPercent: cgst,
+        cgstAmount,
+        sgstPercent: sgst,
+        sgstAmount,
+        igstPercent: 0,
+        igstAmount: 0,
+        grandTotal,
+        amountInWords: numberToIndianWords(grandTotal),
+      };
+    });
   };
 
   const handleSaveCompany = (company: CompanyProfile) => {
     const updated = storage.saveCompany(company);
     setCompanies(updated);
     if (company.id === activeCompany.id || company.isDefault) {
-      setActiveCompany(company);
-      setCurrentBill((prev) => ({
-        ...prev,
-        company,
-      }));
+      handleSelectCompany(company);
     }
   };
 
@@ -62,14 +91,21 @@ export default function App() {
     setCompanies(updated);
     if (activeCompany.id === id) {
       const fallback = updated[0] || DEFAULT_COMPANY;
-      setActiveCompany(fallback);
-      setCurrentBill((prev) => ({ ...prev, company: fallback }));
+      handleSelectCompany(fallback);
     }
   };
 
   // Create clean new bill
   const handleNewBill = () => {
     const nextInvoiceNo = String(bills.length + 101);
+    const isGst = activeCompany.isGst;
+    const subtotal = 9200;
+    const cgstPercent = isGst ? 9 : 0;
+    const cgstAmount = isGst ? 828 : 0;
+    const sgstPercent = isGst ? 9 : 0;
+    const sgstAmount = isGst ? 828 : 0;
+    const grandTotal = isGst ? 10856 : 9200;
+
     const newBill: BillData = {
       id: `bill-${Date.now()}`,
       invoiceNo: nextInvoiceNo,
@@ -82,21 +118,21 @@ export default function App() {
         {
           id: `item-${Date.now()}-1`,
           particulars: 'Copper pipe with insulation',
-          hsnCode: '7411',
+          hsnCode: isGst ? '7411' : '-',
           qty: '46rft.',
           rate: 200,
           amount: 9200,
         },
       ],
-      subtotal: 9200,
-      cgstPercent: 9,
-      cgstAmount: 828,
-      sgstPercent: 9,
-      sgstAmount: 828,
+      subtotal,
+      cgstPercent,
+      cgstAmount,
+      sgstPercent,
+      sgstAmount,
       igstPercent: 0,
       igstAmount: 0,
-      grandTotal: 10856,
-      amountInWords: numberToIndianWords(10856),
+      grandTotal,
+      amountInWords: numberToIndianWords(grandTotal),
       notes: '',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -113,8 +149,10 @@ export default function App() {
   };
 
   const handleSaveBillToArchive = (bill: BillData) => {
-    const updated = storage.saveBill(bill);
-    setBills(updated);
+    const updatedBills = storage.saveBill(bill);
+    setBills(updatedBills);
+    // Refresh parties list as bill party is automatically added/updated
+    setParties(storage.getParties());
   };
 
   const handleDeleteBill = (id: string) => {
@@ -143,7 +181,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-100 text-neutral-900 transition-colors">
+    <div className="min-h-screen bg-slate-50 text-neutral-900 transition-colors">
       {/* Universal Top Navigation */}
       <TopNav
         activeTab={activeTab}
@@ -157,18 +195,18 @@ export default function App() {
         {/* TAB 1: Tax Invoice Maker */}
         {activeTab === 'bill' && (
           <div className="space-y-4">
-            {/* Mobile View Toggle (Sticky below topnav for 390px screens) */}
-            <div className="lg:hidden flex items-center justify-between bg-white dark:bg-neutral-800 p-2 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-xs">
-              <span className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 pl-1">
+            {/* Mobile View Toggle */}
+            <div className="lg:hidden flex items-center justify-between bg-white p-2 rounded-xl border border-slate-200 shadow-xs">
+              <span className="text-xs font-semibold text-slate-600 pl-1">
                 View Mode:
               </span>
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setMobileViewMode('editor')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
                     mobileViewMode === 'editor'
-                      ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900'
-                      : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100'
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:bg-slate-100'
                   }`}
                 >
                   <Edit3 className="w-3.5 h-3.5" />
@@ -176,10 +214,10 @@ export default function App() {
                 </button>
                 <button
                   onClick={() => setMobileViewMode('preview')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
                     mobileViewMode === 'preview'
-                      ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900'
-                      : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100'
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:bg-slate-100'
                   }`}
                 >
                   <Eye className="w-3.5 h-3.5" />
@@ -200,6 +238,7 @@ export default function App() {
                   bill={currentBill}
                   setBill={setCurrentBill}
                   companies={companies}
+                  parties={parties}
                   onSelectCompany={handleSelectCompany}
                   onSaveToArchive={handleSaveBillToArchive}
                   onOpenCompanyManager={() => setActiveTab('companies')}
@@ -214,15 +253,15 @@ export default function App() {
                 }`}
               >
                 <div className="flex items-center justify-between mb-2">
-                  <div className="text-xs font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+                  <div className="text-xs font-bold uppercase tracking-wider text-neutral-600">
                     Live Template Output (Exact Print Layout)
                   </div>
-                  <span className="text-[11px] text-neutral-400">
+                  <span className="text-[11px] text-neutral-400 font-medium">
                     A4 Proportional
                   </span>
                 </div>
 
-                <div className="bg-white/40 dark:bg-neutral-800/40 p-2 sm:p-4 rounded-xl border border-neutral-200 dark:border-neutral-700/80 shadow-xs overflow-auto max-h-[85vh]">
+                <div className="bg-white p-2 sm:p-4 rounded-xl border border-neutral-300 shadow-sm overflow-auto max-h-[85vh]">
                   <BillTemplateView bill={currentBill} />
                 </div>
               </div>
@@ -247,7 +286,7 @@ export default function App() {
               onDeleteCompany={handleDeleteCompany}
             />
 
-            <div className="border-t border-neutral-200 dark:border-neutral-700/80 pt-8">
+            <div className="border-t border-neutral-200 pt-8">
               <BillsArchive
                 bills={bills}
                 companies={companies}

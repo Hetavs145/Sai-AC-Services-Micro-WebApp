@@ -39,6 +39,22 @@ test('calculateBillTotals matches user template Sai AC Services invoice #28', ()
   assert.equal(totals.grandTotal, 22798.00);
 });
 
+test('calculateBillTotals zeroes taxes for Non-GST companies (Hetav Shah, Swati Shah, Nensi Shah)', () => {
+  const items: BillItem[] = [
+    { id: '1', particulars: 'AC Installation and Service', hsnCode: '', qty: '1', rate: 1500, amount: 1500 },
+    { id: '2', particulars: 'Gas Refilling R32', hsnCode: '', qty: '1', rate: 2200, amount: 2200 },
+  ];
+
+  // isGst = false
+  const totals = calculateBillTotals(items, 9, 9, 0, true, false);
+
+  assert.equal(totals.subtotal, 3700);
+  assert.equal(totals.cgstAmount, 0);
+  assert.equal(totals.sgstAmount, 0);
+  assert.equal(totals.igstAmount, 0);
+  assert.equal(totals.grandTotal, 3700);
+});
+
 test('numberToIndianWords converts Indian currency accurately', () => {
   assert.equal(
     numberToIndianWords(22798),

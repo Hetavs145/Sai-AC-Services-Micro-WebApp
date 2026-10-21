@@ -1,6 +1,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 import { GoogleGenAI, Type } from '@google/genai';
 
 dotenv.config();
@@ -11,6 +12,358 @@ const PORT = Number(process.env.PORT) || 3000;
 // Body parser with 50MB limit for high-res photo uploads
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Server-side cloud persistence (No cost, stored centrally on server)
+const DATA_DIR = path.resolve(process.cwd(), 'data');
+const STORE_FILE = path.join(DATA_DIR, 'store.json');
+
+const SEED_COMPANIES = [
+  {
+    id: 'company-sai-ac',
+    name: 'SAI AC SERVICES',
+    isGst: true,
+    address: 'B-1/180 RIDHI SIDHI SOCIETY, B/H PAVANDHAM, SAMTA, VADODARA',
+    gstin: '24AOIPS5416G1ZW',
+    msme: 'UDHYAM-GJ-24-0088174',
+    mobile: '9825184032',
+    bankName: 'ICICI Bank',
+    accountNo: '000305016085',
+    branch: 'Vadodara Main Branch',
+    ifsc: 'ICIC0000003',
+    isDefault: true,
+    createdAt: '2024-10-07T10:00:00.000Z',
+  },
+  {
+    id: 'company-hetav-shah',
+    name: 'HETAV SHAH',
+    isGst: false, // Non-GST company
+    address: 'B-1/180 RIDHI SIDHI SOCIETY, SAMTA, VADODARA - 390023',
+    gstin: '',
+    msme: '',
+    mobile: '9825184032',
+    bankName: 'ICICI Bank',
+    accountNo: '000305016085',
+    branch: 'Vadodara Main Branch',
+    ifsc: 'ICIC0000003',
+    isDefault: false,
+    createdAt: '2024-10-07T10:00:00.000Z',
+  },
+  {
+    id: 'company-swati-shah',
+    name: 'SWATI SHAH',
+    isGst: false, // Non-GST company
+    address: 'B-1/180 RIDHI SIDHI SOCIETY, SAMTA, VADODARA - 390023',
+    gstin: '',
+    msme: '',
+    mobile: '9825184032',
+    bankName: 'ICICI Bank',
+    accountNo: '000305016085',
+    branch: 'Vadodara Main Branch',
+    ifsc: 'ICIC0000003',
+    isDefault: false,
+    createdAt: '2024-10-07T10:00:00.000Z',
+  },
+  {
+    id: 'company-nensi-shah',
+    name: 'NENSI SHAH',
+    isGst: false, // Non-GST company
+    address: 'B-1/180 RIDHI SIDHI SOCIETY, SAMTA, VADODARA - 390023',
+    gstin: '',
+    msme: '',
+    mobile: '9825184032',
+    bankName: 'ICICI Bank',
+    accountNo: '000305016085',
+    branch: 'Vadodara Main Branch',
+    ifsc: 'ICIC0000003',
+    isDefault: false,
+    createdAt: '2024-10-07T10:00:00.000Z',
+  },
+];
+
+const SEED_PARTIES = [
+  {
+    id: 'party-shree-shddhi',
+    name: 'SHREE SHDDHI CREATEURS',
+    siteAddress: 'Site :-Sanvi Casa, Tarsali Ring road, vadodara. (Block No. 1)',
+    gstin: '24ADEFS0224R2ZW',
+    phone: '9824012345',
+    updatedAt: '2024-10-07T14:30:00.000Z',
+  },
+  {
+    id: 'party-patel-constructions',
+    name: 'PATEL CONSTRUCTIONS',
+    siteAddress: 'Opp. Reliance Fresh, Manjalpur Main Road, Vadodara',
+    gstin: '24AAECP1928K1ZZ',
+    phone: '9879554321',
+    updatedAt: '2024-10-01T10:00:00.000Z',
+  },
+];
+
+const SEED_BILLS = [
+  {
+    id: 'bill-template-28',
+    invoiceNo: '28',
+    date: '2024-10-07',
+    company: SEED_COMPANIES[0],
+    partyName: 'SHREE SHDDHI CREATEURS',
+    siteAddress: 'Site :-Sanvi Casa, Tarsali Ring road, vadodara. (Block No. 1)',
+    partyGstin: '24ADEFS0224R2ZW',
+    items: [
+      {
+        id: 'item-1',
+        particulars: 'Copper pipe with insulation.',
+        hsnCode: '7411',
+        qty: '46rft.',
+        rate: 200,
+        amount: 9200,
+      },
+      {
+        id: 'item-2',
+        particulars: '4 core cable.',
+        hsnCode: '8544',
+        qty: '46rft.',
+        rate: 40,
+        amount: 1840,
+      },
+      {
+        id: 'item-3',
+        particulars: 'UPVC drainpipe.',
+        hsnCode: '3917',
+        qty: '80rft.',
+        rate: 50,
+        amount: 4000,
+      },
+      {
+        id: 'item-4',
+        particulars: 'Jari Work',
+        hsnCode: '-',
+        qty: '107rft.',
+        rate: 40,
+        amount: 4280,
+      },
+    ],
+    subtotal: 19320,
+    cgstPercent: 9,
+    cgstAmount: 1738.80,
+    sgstPercent: 9,
+    sgstAmount: 1738.80,
+    igstPercent: 0,
+    igstAmount: 0,
+    grandTotal: 22798.00,
+    amountInWords: 'Twenty Two Thousand Seven Hundred Ninety Eight Only',
+    notes: 'Material delivered at site as per specifications.',
+    createdAt: '2024-10-07T14:30:00.000Z',
+    updatedAt: '2024-10-07T14:30:00.000Z',
+  },
+];
+
+function readServerStore() {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    if (!fs.existsSync(STORE_FILE)) {
+      const initial = {
+        companies: SEED_COMPANIES,
+        parties: SEED_PARTIES,
+        bills: SEED_BILLS,
+      };
+      fs.writeFileSync(STORE_FILE, JSON.stringify(initial, null, 2), 'utf-8');
+      return initial;
+    }
+    const content = fs.readFileSync(STORE_FILE, 'utf-8');
+    const parsed = JSON.parse(content);
+    // Ensure the 4 companies are always present
+    SEED_COMPANIES.forEach((seedComp) => {
+      const exists = parsed.companies?.some((c: any) => c.name.toLowerCase() === seedComp.name.toLowerCase());
+      if (!exists) {
+        parsed.companies = [...(parsed.companies || []), seedComp];
+      }
+    });
+    return parsed;
+  } catch (err) {
+    console.error('Error reading server store:', err);
+    return {
+      companies: SEED_COMPANIES,
+      parties: SEED_PARTIES,
+      bills: SEED_BILLS,
+    };
+  }
+}
+
+function writeServerStore(data: any) {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    fs.writeFileSync(STORE_FILE, JSON.stringify(data, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('Error writing server store:', err);
+  }
+}
+
+// REST endpoints for cloud storage (Centralized on server, 0 cost)
+app.get('/api/data', (req, res) => {
+  const store = readServerStore();
+  res.json({ success: true, ...store });
+});
+
+// Upsert party
+app.post('/api/parties', (req, res) => {
+  try {
+    const party = req.body;
+    if (!party || !party.name) {
+      return res.status(400).json({ error: 'Party name is required' });
+    }
+
+    const store = readServerStore();
+    const parties = store.parties || [];
+    const existingIndex = parties.findIndex(
+      (p: any) => p.id === party.id || p.name.trim().toLowerCase() === party.name.trim().toLowerCase()
+    );
+
+    const updatedParty = {
+      ...party,
+      id: party.id || `party-${Date.now()}`,
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (existingIndex >= 0) {
+      parties[existingIndex] = { ...parties[existingIndex], ...updatedParty };
+    } else {
+      parties.unshift(updatedParty);
+    }
+
+    store.parties = parties;
+    writeServerStore(store);
+    res.json({ success: true, party: updatedParty, parties });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Upsert bill & auto-save party
+app.post('/api/bills', (req, res) => {
+  try {
+    const bill = req.body;
+    if (!bill || !bill.id) {
+      return res.status(400).json({ error: 'Bill data is invalid' });
+    }
+
+    const store = readServerStore();
+    const bills = store.bills || [];
+    const existingIndex = bills.findIndex((b: any) => b.id === bill.id);
+
+    const savedBill = {
+      ...bill,
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (existingIndex >= 0) {
+      bills[existingIndex] = savedBill;
+    } else {
+      bills.unshift(savedBill);
+    }
+    store.bills = bills;
+
+    // Automatically add or update Party in parties dropdown
+    if (bill.partyName && bill.partyName.trim()) {
+      const parties = store.parties || [];
+      const partyIndex = parties.findIndex(
+        (p: any) => p.name.trim().toLowerCase() === bill.partyName.trim().toLowerCase()
+      );
+
+      const partyData = {
+        id: partyIndex >= 0 ? parties[partyIndex].id : `party-${Date.now()}`,
+        name: bill.partyName.trim(),
+        siteAddress: bill.siteAddress || '',
+        gstin: bill.partyGstin || '',
+        updatedAt: new Date().toISOString(),
+      };
+
+      if (partyIndex >= 0) {
+        parties[partyIndex] = { ...parties[partyIndex], ...partyData };
+      } else {
+        parties.unshift(partyData);
+      }
+      store.parties = parties;
+    }
+
+    writeServerStore(store);
+    res.json({ success: true, bill: savedBill, bills: store.bills, parties: store.parties });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete bill
+app.delete('/api/bills/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const store = readServerStore();
+    store.bills = (store.bills || []).filter((b: any) => b.id !== id);
+    writeServerStore(store);
+    res.json({ success: true, bills: store.bills });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete party
+app.delete('/api/parties/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const store = readServerStore();
+    store.parties = (store.parties || []).filter((p: any) => p.id !== id);
+    writeServerStore(store);
+    res.json({ success: true, parties: store.parties });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Upsert company
+app.post('/api/companies', (req, res) => {
+  try {
+    const company = req.body;
+    if (!company || !company.name) {
+      return res.status(400).json({ error: 'Company name is required' });
+    }
+    const store = readServerStore();
+    const companies = store.companies || [];
+    const existingIndex = companies.findIndex((c: any) => c.id === company.id);
+
+    const updated = {
+      ...company,
+      id: company.id || `company-${Date.now()}`,
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (existingIndex >= 0) {
+      companies[existingIndex] = { ...companies[existingIndex], ...updated };
+    } else {
+      companies.push(updated);
+    }
+    store.companies = companies;
+    writeServerStore(store);
+    res.json({ success: true, company: updated, companies });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete company
+app.delete('/api/companies/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const store = readServerStore();
+    store.companies = (store.companies || []).filter((c: any) => c.id !== id);
+    writeServerStore(store);
+    res.json({ success: true, companies: store.companies });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // Shared server-side Gemini client
 const getAiClient = () => {

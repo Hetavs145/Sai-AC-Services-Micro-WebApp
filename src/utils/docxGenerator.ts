@@ -104,35 +104,36 @@ export async function generateBillDocx(bill: BillData): Promise<Blob> {
     })
   );
 
-  // CGST
-  tableRows.push(
-    new TableRow({
-      children: [
-        new TableCell({
-          columnSpan: 4,
-          children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun(`Add: CGST @ ${bill.cgstPercent}%`)] })],
-        }),
-        new TableCell({
-          children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun((Number(bill.cgstAmount) || 0).toFixed(2))] })],
-        }),
-      ],
-    })
-  );
+  // CGST & SGST only for GST companies
+  if (bill.company.isGst) {
+    tableRows.push(
+      new TableRow({
+        children: [
+          new TableCell({
+            columnSpan: 4,
+            children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun(`Add: CGST @ ${bill.cgstPercent}%`)] })],
+          }),
+          new TableCell({
+            children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun((Number(bill.cgstAmount) || 0).toFixed(2))] })],
+          }),
+        ],
+      })
+    );
 
-  // SGST
-  tableRows.push(
-    new TableRow({
-      children: [
-        new TableCell({
-          columnSpan: 4,
-          children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun(`Add: SGST @ ${bill.sgstPercent}%`)] })],
-        }),
-        new TableCell({
-          children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun((Number(bill.sgstAmount) || 0).toFixed(2))] })],
-        }),
-      ],
-    })
-  );
+    tableRows.push(
+      new TableRow({
+        children: [
+          new TableCell({
+            columnSpan: 4,
+            children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun(`Add: SGST @ ${bill.sgstPercent}%`)] })],
+          }),
+          new TableCell({
+            children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun((Number(bill.sgstAmount) || 0).toFixed(2))] })],
+          }),
+        ],
+      })
+    );
+  }
 
   // Grand Total
   tableRows.push(
@@ -140,7 +141,7 @@ export async function generateBillDocx(bill: BillData): Promise<Blob> {
       children: [
         new TableCell({
           columnSpan: 4,
-          children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: 'Grand Total', bold: true, size: 24 })] })],
+          children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: bill.company.isGst ? 'Grand Total' : 'Total Amount Payable', bold: true, size: 24 })] })],
         }),
         new TableCell({
           children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: `₹ ${(Number(bill.grandTotal) || 0).toFixed(2)}`, bold: true, size: 24 })] })],
@@ -157,7 +158,7 @@ export async function generateBillDocx(bill: BillData): Promise<Blob> {
           new Paragraph({
             alignment: AlignmentType.CENTER,
             heading: HeadingLevel.TITLE,
-            children: [new TextRun({ text: 'TAX INVOICE', bold: true, size: 32 })],
+            children: [new TextRun({ text: bill.company.isGst ? 'TAX INVOICE' : 'INVOICE', bold: true, size: 32 })],
           }),
           new Paragraph({
             alignment: AlignmentType.RIGHT,

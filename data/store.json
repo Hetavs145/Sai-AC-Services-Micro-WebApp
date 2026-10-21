@@ -1,0 +1,153 @@
+{
+  "companies": [
+    {
+      "id": "company-sai-ac",
+      "name": "SAI AC SERVICES",
+      "isGst": true,
+      "address": "B-1/180 RIDHI SIDHI SOCIETY, B/H PAVANDHAM, SAMTA, VADODARA",
+      "gstin": "24AOIPS5416G1ZW",
+      "msme": "UDHYAM-GJ-24-0088174",
+      "mobile": "9825184032",
+      "bankName": "ICICI Bank",
+      "accountNo": "000305016085",
+      "branch": "Vadodara Main Branch",
+      "ifsc": "ICIC0000003",
+      "isDefault": true,
+      "createdAt": "2024-10-07T10:00:00.000Z"
+    },
+    {
+      "id": "company-hetav-shah",
+      "name": "HETAV SHAH",
+      "isGst": false,
+      "address": "B-1/180 RIDHI SIDHI SOCIETY, SAMTA, VADODARA - 390023",
+      "gstin": "",
+      "msme": "",
+      "mobile": "9825184032",
+      "bankName": "ICICI Bank",
+      "accountNo": "000305016085",
+      "branch": "Vadodara Main Branch",
+      "ifsc": "ICIC0000003",
+      "isDefault": false,
+      "createdAt": "2024-10-07T10:00:00.000Z"
+    },
+    {
+      "id": "company-swati-shah",
+      "name": "SWATI SHAH",
+      "isGst": false,
+      "address": "B-1/180 RIDHI SIDHI SOCIETY, SAMTA, VADODARA - 390023",
+      "gstin": "",
+      "msme": "",
+      "mobile": "9825184032",
+      "bankName": "ICICI Bank",
+      "accountNo": "000305016085",
+      "branch": "Vadodara Main Branch",
+      "ifsc": "ICIC0000003",
+      "isDefault": false,
+      "createdAt": "2024-10-07T10:00:00.000Z"
+    },
+    {
+      "id": "company-nensi-shah",
+      "name": "NENSI SHAH",
+      "isGst": false,
+      "address": "B-1/180 RIDHI SIDHI SOCIETY, SAMTA, VADODARA - 390023",
+      "gstin": "",
+      "msme": "",
+      "mobile": "9825184032",
+      "bankName": "ICICI Bank",
+      "accountNo": "000305016085",
+      "branch": "Vadodara Main Branch",
+      "ifsc": "ICIC0000003",
+      "isDefault": false,
+      "createdAt": "2024-10-07T10:00:00.000Z"
+    }
+  ],
+  "parties": [
+    {
+      "id": "party-shree-shddhi",
+      "name": "SHREE SHDDHI CREATEURS",
+      "siteAddress": "Site :-Sanvi Casa, Tarsali Ring road, vadodara. (Block No. 1)",
+      "gstin": "24ADEFS0224R2ZW",
+      "phone": "9824012345",
+      "updatedAt": "2026-10-21T00:41:42.914Z"
+    },
+    {
+      "id": "party-patel-constructions",
+      "name": "PATEL CONSTRUCTIONS",
+      "siteAddress": "Opp. Reliance Fresh, Manjalpur Main Road, Vadodara",
+      "gstin": "24AAECP1928K1ZZ",
+      "phone": "9879554321",
+      "updatedAt": "2024-10-01T10:00:00.000Z"
+    }
+  ],
+  "bills": [
+    {
+      "id": "bill-template-28",
+      "invoiceNo": "28",
+      "date": "2024-10-07",
+      "company": {
+        "id": "company-sai-ac",
+        "name": "SAI AC SERVICES",
+        "isGst": true,
+        "address": "B-1/180 RIDHI SIDHI SOCIETY, B/H PAVANDHAM, SAMTA, VADODARA",
+        "gstin": "24AOIPS5416G1ZW",
+        "msme": "UDHYAM-GJ-24-0088174",
+        "mobile": "9825184032",
+        "bankName": "ICICI Bank",
+        "accountNo": "000305016085",
+        "branch": "Vadodara Main Branch",
+        "ifsc": "ICIC0000003",
+        "isDefault": true,
+        "createdAt": "2024-10-07T10:00:00.000Z"
+      },
+      "partyName": "SHREE SHDDHI CREATEURS",
+      "siteAddress": "Site :-Sanvi Casa, Tarsali Ring road, vadodara. (Block No. 1)",
+      "partyGstin": "24ADEFS0224R2ZW",
+      "items": [
+        {
+          "id": "item-1",
+          "particulars": "Copper pipe with insulation.",
+          "hsnCode": "7411",
+          "qty": "46rft.",
+          "rate": 200,
+          "amount": 9200
+        },
+        {
+          "id": "item-2",
+          "particulars": "4 core cable.",
+          "hsnCode": "8544",
+          "qty": "46rft.",
+          "rate": 40,
+          "amount": 1840
+        },
+        {
+          "id": "item-3",
+          "particulars": "UPVC drainpipe.",
+          "hsnCode": "3917",
+          "qty": "80rft.",
+          "rate": 50,
+          "amount": 4000
+        },
+        {
+          "id": "item-4",
+          "particulars": "Jari Work",
+          "hsnCode": "-",
+          "qty": "107rft.",
+          "rate": 40,
+          "amount": 4280
+        }
+      ],
+      "subtotal": 19320,
+      "cgstPercent": 9,
+      "cgstAmount": 1738.8,
+      "sgstPercent": 9,
+      "sgstAmount": 1738.8,
+      "igstPercent": 0,
+      "igstAmount": 0,
+      "grandTotal": 22798,
+      "amountInWords": "Twenty Two Thousand Seven Hundred Ninety Eight Only",
+      "notes": "Material delivered at site as per specifications.",
+      "createdAt": "2024-10-07T14:30:00.000Z",
+      "updatedAt": "2026-10-21T00:41:42.914Z"
+    }
+  ]
+}

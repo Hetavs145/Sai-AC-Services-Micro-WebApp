@@ -1,125 +1,206 @@
-import { CompanyProfile, BillData, DocProject } from '../types';
-import { SAMPLE_COMPANIES, DEFAULT_COMPANY, DEFAULT_BILL } from './defaultData';
+import { CompanyProfile, BillData, PartyProfile } from '../types';
+import { THE_FOUR_COMPANIES, INITIAL_PARTIES, DEFAULT_BILL } from './defaultData';
 
-const STORAGE_KEYS = {
-  COMPANIES: 'patraka_companies_v1',
-  BILLS: 'patraka_bills_v1',
-  DOC_PROJECTS: 'patraka_doc_projects_v1',
-  ACTIVE_COMPANY_ID: 'patraka_active_company_id_v1',
-};
+// In-memory cache for synchronous React state access
+let cachedCompanies: CompanyProfile[] = [...THE_FOUR_COMPANIES];
+let cachedParties: PartyProfile[] = [...INITIAL_PARTIES];
+let cachedBills: BillData[] = [DEFAULT_BILL];
+let activeCompanyId: string = THE_FOUR_COMPANIES[0].id;
 
 export const storage = {
-  // Companies
+  // Sync Getters
   getCompanies(): CompanyProfile[] {
-    try {
-      const data = localStorage.getItem(STORAGE_KEYS.COMPANIES);
-      if (!data) {
-        localStorage.setItem(STORAGE_KEYS.COMPANIES, JSON.stringify(SAMPLE_COMPANIES));
-        return SAMPLE_COMPANIES;
-      }
-      return JSON.parse(data);
-    } catch {
-      return SAMPLE_COMPANIES;
-    }
-  },
-
-  saveCompany(company: CompanyProfile): CompanyProfile[] {
-    const list = this.getCompanies();
-    const existingIndex = list.findIndex((c) => c.id === company.id);
-    let updated: CompanyProfile[];
-    if (existingIndex >= 0) {
-      updated = [...list];
-      updated[existingIndex] = company;
-    } else {
-      updated = [company, ...list];
-    }
-    localStorage.setItem(STORAGE_KEYS.COMPANIES, JSON.stringify(updated));
-    return updated;
-  },
-
-  deleteCompany(id: string): CompanyProfile[] {
-    const list = this.getCompanies();
-    if (list.length <= 1) {
-      // Don't delete last company
-      return list;
-    }
-    const filtered = list.filter((c) => c.id !== id);
-    localStorage.setItem(STORAGE_KEYS.COMPANIES, JSON.stringify(filtered));
-    return filtered;
+    return cachedCompanies;
   },
 
   getActiveCompany(): CompanyProfile {
-    const companies = this.getCompanies();
-    const activeId = localStorage.getItem(STORAGE_KEYS.ACTIVE_COMPANY_ID);
-    if (activeId) {
-      const found = companies.find((c) => c.id === activeId);
-      if (found) return found;
-    }
-    const defaultComp = companies.find((c) => c.isDefault) || companies[0] || DEFAULT_COMPANY;
-    return defaultComp;
+    return (
+      cachedCompanies.find((c) => c.id === activeCompanyId) ||
+      cachedCompanies[0] ||
+      THE_FOUR_COMPANIES[0]
+    );
   },
 
   setActiveCompanyId(id: string) {
-    localStorage.setItem(STORAGE_KEYS.ACTIVE_COMPANY_ID, id);
+    activeCompanyId = id;
   },
 
-  // Bills Archive
+  getParties(): PartyProfile[] {
+    return cachedParties;
+  },
+
   getBills(): BillData[] {
-    try {
-      const data = localStorage.getItem(STORAGE_KEYS.BILLS);
-      if (!data) {
-        const initial = [DEFAULT_BILL];
-        localStorage.setItem(STORAGE_KEYS.BILLS, JSON.stringify(initial));
-        return initial;
-      }
-      return JSON.parse(data);
-    } catch {
-      return [DEFAULT_BILL];
-    }
+    return cachedBills;
   },
 
-  saveBill(bill: BillData): BillData[] {
-    const bills = this.getBills();
-    const index = bills.findIndex((b) => b.id === bill.id);
-    let updated: BillData[];
-    if (index >= 0) {
-      updated = [...bills];
-      updated[index] = { ...bill, updatedAt: new Date().toISOString() };
+  // Save company (Optimistic local update + server cloud persist)
+  saveCompany(company: CompanyProfile): CompanyProfile[] {
+    const existingIndex = cachedCompanies.findIndex((c) => c.id === company.id);
+    if (existingIndex >= 0) {
+      cachedCompanies[existingIndex] = { ...company };
     } else {
-      updated = [{ ...bill, updatedAt: new Date().toISOString() }, ...bills];
+      cachedCompanies.push({ ...company });
     }
-    localStorage.setItem(STORAGE_KEYS.BILLS, JSON.stringify(updated));
-    return updated;
+
+    // Persist to server in background
+    fetch('/api/companies', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(company),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.companies) cachedCompanies = data.companies;
+      })
+      .catch((err) => console.warn('Cloud sync error for company:', err));
+
+    return [...cachedCompanies];
+  },
+
+  deleteCompany(id: string): CompanyProfile[] {
+    cachedCompanies = cachedCompanies.filter((c) => c.id !== id);
+
+    fetch(`/api/companies/${id}`, { method: 'DELETE' })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.companies) cachedCompanies = data.companies;
+      })
+      .catch((err) => console.warn('Cloud delete error for company:', err));
+
+    return [...cachedCompanies];
+  },
+
+  // Save party
+  saveParty(party: PartyProfile): PartyProfile[] {
+    const existingIndex = cachedParties.findIndex(
+      (p) => p.id === party.id || p.name.trim().toLowerCase() === party.name.trim().toLowerCase()
+    );
+    const updated = {
+      ...party,
+      id: party.id || `party-${Date.now()}`,
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (existingIndex >= 0) {
+      cachedParties[existingIndex] = updated;
+    } else {
+      cachedParties.unshift(updated);
+    }
+
+    fetch('/api/parties', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updated),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.parties) cachedParties = data.parties;
+      })
+      .catch((err) => console.warn('Cloud sync error for party:', err));
+
+    return [...cachedParties];
+  },
+
+  deleteParty(id: string): PartyProfile[] {
+    cachedParties = cachedParties.filter((p) => p.id !== id);
+
+    fetch(`/api/parties/${id}`, { method: 'DELETE' })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.parties) cachedParties = data.parties;
+      })
+      .catch((err) => console.warn('Cloud delete error for party:', err));
+
+    return [...cachedParties];
+  },
+
+  // Save bill (Also automatically upserts party into party dropdown on cloud server)
+  saveBill(bill: BillData): BillData[] {
+    const existingIndex = cachedBills.findIndex((b) => b.id === bill.id);
+    const updatedBill = {
+      ...bill,
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (existingIndex >= 0) {
+      cachedBills[existingIndex] = updatedBill;
+    } else {
+      cachedBills.unshift(updatedBill);
+    }
+
+    // Auto update party locally too
+    if (bill.partyName && bill.partyName.trim()) {
+      const pName = bill.partyName.trim();
+      const pIdx = cachedParties.findIndex((p) => p.name.trim().toLowerCase() === pName.toLowerCase());
+      const pData: PartyProfile = {
+        id: pIdx >= 0 ? cachedParties[pIdx].id : `party-${Date.now()}`,
+        name: pName,
+        siteAddress: bill.siteAddress || '',
+        gstin: bill.partyGstin || '',
+        updatedAt: new Date().toISOString(),
+      };
+      if (pIdx >= 0) {
+        cachedParties[pIdx] = { ...cachedParties[pIdx], ...pData };
+      } else {
+        cachedParties.unshift(pData);
+      }
+    }
+
+    // Persist to server cloud store
+    fetch('/api/bills', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updatedBill),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.bills) cachedBills = data.bills;
+        if (data.parties) cachedParties = data.parties;
+      })
+      .catch((err) => console.warn('Cloud save error for bill:', err));
+
+    return [...cachedBills];
   },
 
   deleteBill(id: string): BillData[] {
-    const bills = this.getBills();
-    const filtered = bills.filter((b) => b.id !== id);
-    localStorage.setItem(STORAGE_KEYS.BILLS, JSON.stringify(filtered));
-    return filtered;
+    cachedBills = cachedBills.filter((b) => b.id !== id);
+
+    fetch(`/api/bills/${id}`, { method: 'DELETE' })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.bills) cachedBills = data.bills;
+      })
+      .catch((err) => console.warn('Cloud delete error for bill:', err));
+
+    return [...cachedBills];
   },
 
-  // Document Projects
-  getDocProjects(): DocProject[] {
+  // Fetch initial cloud data from server on app load
+  async fetchCloudData(): Promise<{
+    companies: CompanyProfile[];
+    parties: PartyProfile[];
+    bills: BillData[];
+  }> {
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.DOC_PROJECTS);
-      return data ? JSON.parse(data) : [];
-    } catch {
-      return [];
-    }
-  },
+      const res = await fetch('/api/data');
+      if (!res.ok) throw new Error('Failed to fetch from server');
+      const data = await res.json();
+      if (data.companies?.length) cachedCompanies = data.companies;
+      if (data.parties?.length) cachedParties = data.parties;
+      if (data.bills?.length) cachedBills = data.bills;
 
-  saveDocProject(proj: DocProject): DocProject[] {
-    const projs = this.getDocProjects();
-    const index = projs.findIndex((p) => p.id === proj.id);
-    let updated: DocProject[];
-    if (index >= 0) {
-      updated = [...projs];
-      updated[index] = proj;
-    } else {
-      updated = [proj, ...projs];
+      return {
+        companies: cachedCompanies,
+        parties: cachedParties,
+        bills: cachedBills,
+      };
+    } catch (err) {
+      console.warn('Using default seed data fallback:', err);
+      return {
+        companies: cachedCompanies,
+        parties: cachedParties,
+        bills: cachedBills,
+      };
     }
-    localStorage.setItem(STORAGE_KEYS.DOC_PROJECTS, JSON.stringify(updated));
-    return updated;
   },
 };

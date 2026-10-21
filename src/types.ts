@@ -1,6 +1,17 @@
+export interface PartyProfile {
+  id: string;
+  name: string;
+  siteAddress: string;
+  gstin: string;
+  phone?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface CompanyProfile {
   id: string;
   name: string;
+  isGst: boolean; // true only for SAI AC SERVICES, false for HETAV SHAH, SWATI SHAH, NENSI SHAH
   address: string;
   gstin: string;
   msme: string;

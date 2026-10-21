@@ -8,11 +8,11 @@ interface BillTemplateViewProps {
 export const BillTemplateView: React.FC<BillTemplateViewProps> = ({ bill }) => {
   return (
     <div className="w-full bg-white text-neutral-900 border border-neutral-900/80 shadow-md font-sans text-xs sm:text-sm select-text transition-all max-w-[800px] mx-auto">
-      {/* Top Banner: TAX INVOICE + INVOICE NO / DATE */}
+      {/* Top Banner: TAX INVOICE / INVOICE + INVOICE NO / DATE */}
       <div className="grid grid-cols-12 border-b border-neutral-900">
         <div className="col-span-7 sm:col-span-8 bg-[#EBF0F8] flex items-center justify-center py-2.5 px-3 sm:px-4 border-r border-neutral-900">
           <h1 className="text-sm sm:text-xl font-black tracking-wider text-neutral-950 uppercase whitespace-nowrap">
-            TAX INVOICE
+            {bill.company.isGst ? 'TAX INVOICE' : 'INVOICE'}
           </h1>
         </div>
         <div className="col-span-5 sm:col-span-4 p-2 text-[10px] sm:text-xs flex flex-col justify-center font-bold bg-[#EBF0F8] whitespace-nowrap">
@@ -35,10 +35,12 @@ export const BillTemplateView: React.FC<BillTemplateViewProps> = ({ bill }) => {
         <p className="text-[11px] sm:text-xs text-neutral-800 leading-snug max-w-xl mx-auto">
           {bill.company.address}
         </p>
-        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 mt-1 text-[11px] sm:text-xs font-semibold text-neutral-800">
-          {bill.company.gstin && <span>GSTIN: <span className="font-mono">{bill.company.gstin}</span></span>}
-          {bill.company.msme && <span>MSME Registration No.:-<span className="font-mono">{bill.company.msme}</span></span>}
-        </div>
+        {bill.company.isGst && (
+          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 mt-1 text-[11px] sm:text-xs font-semibold text-neutral-800">
+            {bill.company.gstin && <span>GSTIN: <span className="font-mono">{bill.company.gstin}</span></span>}
+            {bill.company.msme && <span>MSME Registration No.:-<span className="font-mono">{bill.company.msme}</span></span>}
+          </div>
+        )}
         {bill.company.mobile && (
           <p className="text-[11px] sm:text-xs font-medium text-neutral-800 mt-0.5">
             Mobile No.: <span className="font-mono">{bill.company.mobile}</span>
@@ -59,7 +61,7 @@ export const BillTemplateView: React.FC<BillTemplateViewProps> = ({ bill }) => {
             {bill.siteAddress}
           </div>
         )}
-        {bill.partyGstin && (
+        {bill.company.isGst && bill.partyGstin && (
           <div className="text-xs font-bold text-neutral-900 mt-1">
             GST NO:- <span className="font-mono">{bill.partyGstin}</span>
           </div>
@@ -75,7 +77,7 @@ export const BillTemplateView: React.FC<BillTemplateViewProps> = ({ bill }) => {
                 Particulars (Descriptions & Specifications)
               </th>
               <th className="py-2 px-2 border-r border-neutral-900 text-center w-[13%]">
-                HSN Code
+                {bill.company.isGst ? 'HSN Code' : 'Item Code'}
               </th>
               <th className="py-2 px-2 border-r border-neutral-900 text-center w-[12%]">
                 Qty
@@ -155,42 +157,51 @@ export const BillTemplateView: React.FC<BillTemplateViewProps> = ({ bill }) => {
 
         {/* Right Side: Tax Calculation & Grand Total */}
         <div className="col-span-6 sm:col-span-5 flex flex-col justify-between">
-          <div className="divide-y divide-neutral-900 text-[11px] sm:text-xs">
-            {/* CGST */}
-            <div className="flex items-center justify-between p-1.5 px-2.5">
-              <div className="flex items-center gap-2">
-                <span>Add : CGST @</span>
-                <span className="font-mono font-bold">{bill.cgstPercent}%</span>
-              </div>
-              <span className="font-mono tabular-nums font-semibold">
-                {(Number(bill.cgstAmount) || 0).toFixed(2)}
-              </span>
-            </div>
-
-            {/* SGST */}
-            <div className="flex items-center justify-between p-1.5 px-2.5">
-              <div className="flex items-center gap-2">
-                <span>Add : SGST @</span>
-                <span className="font-mono font-bold">{bill.sgstPercent}%</span>
-              </div>
-              <span className="font-mono tabular-nums font-semibold">
-                {(Number(bill.sgstAmount) || 0).toFixed(2)}
-              </span>
-            </div>
-
-            {/* IGST if applicable */}
-            {bill.igstPercent > 0 && (
+          {bill.company.isGst ? (
+            <div className="divide-y divide-neutral-900 text-[11px] sm:text-xs">
+              {/* CGST */}
               <div className="flex items-center justify-between p-1.5 px-2.5">
                 <div className="flex items-center gap-2">
-                  <span>Add : IGST @</span>
-                  <span className="font-mono font-bold">{bill.igstPercent}%</span>
+                  <span>Add : CGST @</span>
+                  <span className="font-mono font-bold">{bill.cgstPercent}%</span>
                 </div>
                 <span className="font-mono tabular-nums font-semibold">
-                  {(Number(bill.igstAmount) || 0).toFixed(2)}
+                  {(Number(bill.cgstAmount) || 0).toFixed(2)}
                 </span>
               </div>
-            )}
-          </div>
+
+              {/* SGST */}
+              <div className="flex items-center justify-between p-1.5 px-2.5">
+                <div className="flex items-center gap-2">
+                  <span>Add : SGST @</span>
+                  <span className="font-mono font-bold">{bill.sgstPercent}%</span>
+                </div>
+                <span className="font-mono tabular-nums font-semibold">
+                  {(Number(bill.sgstAmount) || 0).toFixed(2)}
+                </span>
+              </div>
+
+              {/* IGST if applicable */}
+              {bill.igstPercent > 0 && (
+                <div className="flex items-center justify-between p-1.5 px-2.5">
+                  <div className="flex items-center gap-2">
+                    <span>Add : IGST @</span>
+                    <span className="font-mono font-bold">{bill.igstPercent}%</span>
+                  </div>
+                  <span className="font-mono tabular-nums font-semibold">
+                    {(Number(bill.igstAmount) || 0).toFixed(2)}
+                  </span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="p-3 text-[11px] sm:text-xs text-neutral-800 flex items-center justify-between font-bold">
+              <span>Subtotal:</span>
+              <span className="font-mono tabular-nums">
+                {(Number(bill.subtotal) || 0).toFixed(2)}
+              </span>
+            </div>
+          )}
 
           {/* Grand Total Row */}
           <div className="bg-[#EBF0F8] border-t border-neutral-900 flex items-center justify-between p-2 px-3 font-bold">

@@ -32,11 +32,11 @@ export function generateBillPdf(bill: BillData): jsPDF {
   const dividerX = margin + contentWidth - rightBoxWidth;
   doc.line(dividerX, margin, dividerX, margin + titleBannerHeight);
 
-  // "TAX INVOICE"
+  // "TAX INVOICE" or "INVOICE"
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
   doc.setTextColor(15, 23, 42);
-  doc.text('TAX INVOICE', margin + (contentWidth - rightBoxWidth) / 2, margin + 9, { align: 'center' });
+  doc.text(bill.company.isGst ? 'TAX INVOICE' : 'INVOICE', margin + (contentWidth - rightBoxWidth) / 2, margin + 9, { align: 'center' });
 
   // Invoice No & Date
   doc.setFontSize(8);
@@ -57,13 +57,15 @@ export function generateBillPdf(bill: BillData): jsPDF {
   doc.text(bill.company.address || '', margin + contentWidth / 2, currentY, { align: 'center' });
 
   currentY += 4.5;
-  const regParts: string[] = [];
-  if (bill.company.gstin) regParts.push(`GSTIN: ${bill.company.gstin}`);
-  if (bill.company.msme) regParts.push(`MSME Registration No.:-${bill.company.msme}`);
-  doc.text(regParts.join('  |  '), margin + contentWidth / 2, currentY, { align: 'center' });
+  if (bill.company.isGst) {
+    const regParts: string[] = [];
+    if (bill.company.gstin) regParts.push(`GSTIN: ${bill.company.gstin}`);
+    if (bill.company.msme) regParts.push(`MSME Registration No.:-${bill.company.msme}`);
+    doc.text(regParts.join('  |  '), margin + contentWidth / 2, currentY, { align: 'center' });
+    currentY += 4;
+  }
 
   if (bill.company.mobile) {
-    currentY += 4;
     doc.text(`Mobile No.: ${bill.company.mobile}`, margin + contentWidth / 2, currentY, { align: 'center' });
   }
 
@@ -216,22 +218,26 @@ export function generateBillPdf(bill: BillData): jsPDF {
   const taxColValX = margin + contentWidth - 2;
   const taxColMidX = lowerBlockDividerX + 44;
 
-  // Divider between CGST label and amount
-  doc.line(taxColMidX, taxY, taxColMidX, taxY + lowerBlockHeight - 8);
+  if (bill.company.isGst) {
+    // Divider between CGST label and amount
+    doc.line(taxColMidX, taxY, taxColMidX, taxY + lowerBlockHeight - 8);
 
-  // Add CGST
-  taxY += 4.5;
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.5);
-  doc.text(`Add : CGST @ ${bill.cgstPercent}%`, lowerBlockDividerX + 2, taxY);
-  doc.text((Number(bill.cgstAmount) || 0).toFixed(2), taxColValX, taxY, { align: 'right' });
+    // Add CGST
+    taxY += 4.5;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.text(`Add : CGST @ ${bill.cgstPercent}%`, lowerBlockDividerX + 2, taxY);
+    doc.text((Number(bill.cgstAmount) || 0).toFixed(2), taxColValX, taxY, { align: 'right' });
 
-  taxY += 5;
-  doc.line(lowerBlockDividerX, taxY - 1, margin + contentWidth, taxY - 1);
-  doc.text(`Add : SGST @ ${bill.sgstPercent}%`, lowerBlockDividerX + 2, taxY + 3);
-  doc.text((Number(bill.sgstAmount) || 0).toFixed(2), taxColValX, taxY + 3, { align: 'right' });
+    taxY += 5;
+    doc.line(lowerBlockDividerX, taxY - 1, margin + contentWidth, taxY - 1);
+    doc.text(`Add : SGST @ ${bill.sgstPercent}%`, lowerBlockDividerX + 2, taxY + 3);
+    doc.text((Number(bill.sgstAmount) || 0).toFixed(2), taxColValX, taxY + 3, { align: 'right' });
+    taxY += 8.5;
+  }
 
-  taxY += 8.5;
+  // Grand Total highlight row sits at the bottom of the lower block
+  taxY = lowerBlockStartY + lowerBlockHeight - 10;
   doc.line(lowerBlockDividerX, taxY, margin + contentWidth, taxY);
 
   // Grand Total highlight row
@@ -239,8 +245,9 @@ export function generateBillPdf(bill: BillData): jsPDF {
   doc.rect(lowerBlockDividerX, taxY, taxBlockWidth, 10, 'F');
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9.5);
+  doc.setTextColor(15, 23, 42);
   doc.text('Grand Total', lowerBlockDividerX + 3, taxY + 6.5);
-  doc.text(`₹ ${bill.grandTotal.toFixed(2)}`, taxColValX, taxY + 6.5, { align: 'right' });
+  doc.text(`₹ ${(Number(bill.grandTotal) || 0).toFixed(2)}`, taxColValX, taxY + 6.5, { align: 'right' });
 
   // Total Amount in Words Banner
   const wordsY = lowerBlockStartY + lowerBlockHeight;
@@ -313,16 +320,33 @@ export async function generateDocProjectPdf(project: DocProject): Promise<jsPDF>
     // Image
     if (page.imageDataUrl) {
       const imgHeight = 150;
-      doc.addImage(
-        page.imageDataUrl,
-        'JPEG',
-        margin,
-        contentY,
-        printableWidth,
-        imgHeight,
-        undefined,
-        'FAST'
-      );
+      try {
+        const isPng = page.imageDataUrl.includes('image/png');
+        const isWebp = page.imageDataUrl.includes('image/webp');
+        const format = isPng ? 'PNG' : isWebp ? 'WEBP' : 'JPEG';
+        doc.addImage(
+          page.imageDataUrl,
+          format,
+          margin,
+          contentY,
+          printableWidth,
+          imgHeight,
+          undefined,
+          'FAST'
+        );
+      } catch (imgErr) {
+        try {
+          doc.addImage(
+            page.imageDataUrl,
+            margin,
+            contentY,
+            printableWidth,
+            imgHeight
+          );
+        } catch (fallbackErr) {
+          console.warn('Failed to embed image into PDF:', fallbackErr);
+        }
+      }
 
       // Render annotations over image
       if (page.annotations && page.annotations.length > 0) {
@@ -330,12 +354,12 @@ export async function generateDocProjectPdf(project: DocProject): Promise<jsPDF>
           const annotX = margin + (annot.xPercent / 100) * printableWidth;
           const annotY = contentY + (annot.yPercent / 100) * imgHeight;
 
-          // Background pill / badge
+          // Background pill / badge in unified blue
           doc.setFont('helvetica', 'bold');
           doc.setFontSize(8);
           const txtWidth = doc.getTextWidth(annot.text) + 6;
 
-          doc.setFillColor(15, 23, 42);
+          doc.setFillColor(37, 99, 235); // Clean professional blue
           doc.rect(annotX - 3, annotY - 4.5, txtWidth, 6, 'F');
           doc.setTextColor(255, 255, 255);
           doc.text(annot.text, annotX, annotY - 0.5);
