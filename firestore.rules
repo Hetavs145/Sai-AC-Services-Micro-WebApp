@@ -1,0 +1,43 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper to check valid document IDs
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128;
+    }
+
+    // Companies collection
+    match /companies/{companyId} {
+      allow read: if true;
+      allow create, update: if isValidId(companyId)
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 200;
+      allow delete: if isValidId(companyId);
+    }
+
+    // Parties collection
+    match /parties/{partyId} {
+      allow read: if true;
+      allow create, update: if isValidId(partyId)
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 200;
+      allow delete: if isValidId(partyId);
+    }
+
+    // Bills collection
+    match /bills/{billId} {
+      allow read: if true;
+      allow create, update: if isValidId(billId)
+        && request.resource.data.invoiceNo is string
+        && request.resource.data.partyName is string;
+      allow delete: if isValidId(billId);
+    }
+
+    // Connection test doc
+    match /test/{docId} {
+      allow read, write: if true;
+    }
+  }
+}

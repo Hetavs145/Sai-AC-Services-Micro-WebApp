@@ -78,6 +78,18 @@ export const TopNav: React.FC<TopNavProps> = ({
             <Building2 className="w-4 h-4" />
             <span>Company Profiles</span>
           </button>
+
+          <button
+            onClick={() => setActiveTab('archive')}
+            className={`flex items-center gap-2 px-3.5 py-2 text-xs lg:text-sm font-medium rounded-lg transition-colors whitespace-nowrap cursor-pointer ${
+              activeTab === 'archive'
+                ? 'bg-blue-50 text-blue-700 font-bold border border-blue-200/80 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+            }`}
+          >
+            <Archive className="w-4 h-4" />
+            <span>Bills Archive (FY)</span>
+          </button>
         </nav>
 
         {/* Zone 3: Primary Action */}
@@ -130,7 +142,20 @@ export const TopNav: React.FC<TopNavProps> = ({
           <Building2 className="w-3.5 h-3.5" />
           <span>Companies</span>
         </button>
+
+        <button
+          onClick={() => setActiveTab('archive')}
+          className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap ${
+            activeTab === 'archive'
+              ? 'bg-blue-50 text-blue-700 font-bold border border-blue-200'
+              : 'text-slate-600'
+          }`}
+        >
+          <Archive className="w-3.5 h-3.5" />
+          <span>Archive (FY)</span>
+        </button>
       </div>
     </header>
   );
 };
+

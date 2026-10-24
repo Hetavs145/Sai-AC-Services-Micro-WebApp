@@ -22,6 +22,8 @@ import { generateBillPdf } from '../utils/pdfGenerator';
 import { generateBillDocx } from '../utils/docxGenerator';
 import { shareBillViaWhatsApp } from '../utils/whatsappShare';
 
+import { calculateFinancialYear } from '../utils/financialYear';
+
 interface BillEditorProps {
   bill: BillData;
   setBill: React.Dispatch<React.SetStateAction<BillData>>;
@@ -29,6 +31,7 @@ interface BillEditorProps {
   parties: PartyProfile[];
   onSelectCompany: (company: CompanyProfile) => void;
   onSaveToArchive: (bill: BillData) => void;
+  onDeleteBill?: (id: string) => void;
   onOpenCompanyManager: () => void;
   onResetToTemplate: () => void;
 }
@@ -40,6 +43,7 @@ export const BillEditor: React.FC<BillEditorProps> = ({
   parties,
   onSelectCompany,
   onSaveToArchive,
+  onDeleteBill,
   onOpenCompanyManager,
   onResetToTemplate,
 }) => {
@@ -538,13 +542,25 @@ export const BillEditor: React.FC<BillEditorProps> = ({
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-neutral-700 block mb-1">
-              Invoice Date
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-semibold text-neutral-700">
+                Invoice Date
+              </label>
+              <span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded">
+                {calculateFinancialYear(bill.date)}
+              </span>
+            </div>
             <input
               type="text"
               value={bill.date}
-              onChange={(e) => setBill({ ...bill, date: e.target.value })}
+              onChange={(e) => {
+                const newDate = e.target.value;
+                setBill({
+                  ...bill,
+                  date: newDate,
+                  financialYear: calculateFinancialYear(newDate),
+                });
+              }}
               placeholder="e.g. 7/10/24 or YYYY-MM-DD"
               className="w-full px-3 py-2 text-xs sm:text-sm font-mono border border-neutral-300 rounded-lg bg-neutral-50/50 text-neutral-900 focus:bg-white focus:ring-2 focus:ring-blue-500"
             />
@@ -822,7 +838,26 @@ export const BillEditor: React.FC<BillEditorProps> = ({
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Delete Bill button */}
+          {onDeleteBill && (
+            <button
+              type="button"
+              onClick={() => {
+                const targetName = bill.partyName || 'Customer';
+                const inv = bill.invoiceNo || 'Draft';
+                if (window.confirm(`Are you sure you want to permanently delete this bill (Invoice #${inv} - ${targetName}) from the cloud database?`)) {
+                  onDeleteBill(bill.id);
+                }
+              }}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg shadow-xs transition-colors whitespace-nowrap cursor-pointer"
+              title="Delete this bill from cloud database"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Delete Bill</span>
+            </button>
+          )}
+
           {/* Print */}
           <button
             onClick={handlePrint}

@@ -9,6 +9,7 @@ import { BillData, CompanyProfile, PartyProfile } from './types';
 import { storage } from './utils/storage';
 import { DEFAULT_BILL, DEFAULT_COMPANY } from './utils/defaultData';
 import { numberToIndianWords } from './utils/billCalculator';
+import { calculateFinancialYear } from './utils/financialYear';
 import { Eye, Edit3 } from 'lucide-react';
 
 export default function App() {
@@ -36,7 +37,7 @@ export default function App() {
     document.documentElement.classList.remove('dark');
   }, []);
 
-  // Fetch initial cloud data from server on startup
+  // Fetch initial cloud data and attach real-time cross-platform Firestore listeners
   useEffect(() => {
     storage.fetchCloudData().then((data) => {
       if (data.companies?.length) {
@@ -50,6 +51,33 @@ export default function App() {
         setCurrentBill(data.bills[0]);
       }
     });
+
+    // Real-time Firestore sync across all devices and tabs
+    const unsubscribe = storage.initRealtimeSync({
+      onCompanies: (liveCompanies) => {
+        if (liveCompanies.length > 0) {
+          setCompanies(liveCompanies);
+          setActiveCompany((prev) => {
+            const found = liveCompanies.find((c) => c.id === prev.id);
+            return found || liveCompanies[0];
+          });
+        }
+      },
+      onParties: (liveParties) => {
+        if (liveParties.length > 0) {
+          setParties(liveParties);
+        }
+      },
+      onBills: (liveBills) => {
+        if (liveBills.length > 0) {
+          setBills(liveBills);
+        }
+      },
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   // When active company is switched, update current bill's company & taxes
@@ -158,6 +186,13 @@ export default function App() {
   const handleDeleteBill = (id: string) => {
     const updated = storage.deleteBill(id);
     setBills(updated);
+    if (currentBill.id === id) {
+      if (updated.length > 0) {
+        setCurrentBill(updated[0]);
+      } else {
+        handleNewBill();
+      }
+    }
   };
 
   const handleEditBillFromArchive = (bill: BillData) => {
@@ -167,11 +202,13 @@ export default function App() {
   };
 
   const handleDuplicateBill = (bill: BillData) => {
+    const todayStr = new Date().toISOString().split('T')[0];
     const dup: BillData = {
       ...bill,
       id: `bill-${Date.now()}`,
       invoiceNo: `${bill.invoiceNo}-copy`,
-      date: new Date().toISOString().split('T')[0],
+      date: todayStr,
+      financialYear: calculateFinancialYear(todayStr),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -241,6 +278,7 @@ export default function App() {
                   parties={parties}
                   onSelectCompany={handleSelectCompany}
                   onSaveToArchive={handleSaveBillToArchive}
+                  onDeleteBill={handleDeleteBill}
                   onOpenCompanyManager={() => setActiveTab('companies')}
                   onResetToTemplate={handleResetToTemplate}
                 />

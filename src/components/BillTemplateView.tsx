@@ -24,6 +24,10 @@ export const BillTemplateView: React.FC<BillTemplateViewProps> = ({ bill }) => {
             <span>DATE :</span>
             <span className="font-mono tabular-nums">{bill.date || 'N/A'}</span>
           </div>
+          <div className="flex items-center justify-between gap-1 mt-0.5 text-[9px] sm:text-[10px] text-neutral-600">
+            <span>FY :</span>
+            <span className="font-mono font-semibold">{bill.financialYear || (bill.date ? (new Date(bill.date).getMonth() + 1 >= 4 ? `FY ${new Date(bill.date).getFullYear()}-${String(new Date(bill.date).getFullYear() + 1).slice(-2)}` : `FY ${new Date(bill.date).getFullYear() - 1}-${String(new Date(bill.date).getFullYear()).slice(-2)}`) : 'FY 2026-27')}</span>
+          </div>
         </div>
       </div>
 

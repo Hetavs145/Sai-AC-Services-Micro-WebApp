@@ -1,0 +1,81 @@
+{
+  "entities": {
+    "Company": {
+      "title": "Company",
+      "description": "Business profile representing issuing organization (GST or non-GST)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "isGst": { "type": "boolean" },
+        "address": { "type": "string" },
+        "gstin": { "type": "string" },
+        "msme": { "type": "string" },
+        "mobile": { "type": "string" },
+        "bankName": { "type": "string" },
+        "accountNo": { "type": "string" },
+        "branch": { "type": "string" },
+        "ifsc": { "type": "string" },
+        "isDefault": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "name"]
+    },
+    "Party": {
+      "title": "Party",
+      "description": "Client or customer profile with billing details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "siteAddress": { "type": "string" },
+        "gstin": { "type": "string" },
+        "phone": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "name"]
+    },
+    "Bill": {
+      "title": "Bill",
+      "description": "Tax invoice or commercial invoice stored across financial years",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "invoiceNo": { "type": "string" },
+        "date": { "type": "string" },
+        "financialYear": { "type": "string" },
+        "partyName": { "type": "string" },
+        "siteAddress": { "type": "string" },
+        "partyGstin": { "type": "string" },
+        "subtotal": { "type": "number" },
+        "cgstPercent": { "type": "number" },
+        "cgstAmount": { "type": "number" },
+        "sgstPercent": { "type": "number" },
+        "sgstAmount": { "type": "number" },
+        "igstPercent": { "type": "number" },
+        "igstAmount": { "type": "number" },
+        "grandTotal": { "type": "number" },
+        "amountInWords": { "type": "string" },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "invoiceNo", "partyName", "grandTotal"]
+    }
+  },
+  "firestore": {
+    "/companies/{companyId}": {
+      "schema": { "$ref": "#/entities/Company" },
+      "description": "Global collection of business organization profiles"
+    },
+    "/parties/{partyId}": {
+      "schema": { "$ref": "#/entities/Party" },
+      "description": "Global collection of customer & party profiles"
+    },
+    "/bills/{billId}": {
+      "schema": { "$ref": "#/entities/Bill" },
+      "description": "Archived bills and invoices retained across financial years"
+    }
+  }
+}

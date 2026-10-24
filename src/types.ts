@@ -37,6 +37,7 @@ export interface BillData {
   id: string;
   invoiceNo: string;
   date: string;
+  financialYear?: string; // e.g. "FY 2024-25", "FY 2026-27"
   company: CompanyProfile;
   partyName: string;
   siteAddress: string;
